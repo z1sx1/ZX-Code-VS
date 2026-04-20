@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>LightCode · Monochrome Studio</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #000000;
+      font-family: 'Segoe UI', 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
+      height: 100vh;
+      overflow: hidden;
+      color: #ffffff;
+    }
+
+    /* main app container */
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+    }
+
+    /* top bar - pure black & white */
+    .title-bar {
+      background: #0a0a0a;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border-bottom: 1px solid #2a2a2a;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      background: #111111;
+      padding: 4px 12px;
+      border-radius: 6px;
+      color: #ffffff;
+    }
+
+    .logo i {
+      font-style: normal;
+      font-size: 18px;
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 12px;
+      background: #0a0a0a;
+      padding: 4px 12px;
+      border-radius: 24px;
+    }
+
+    .file-actions button {
+      background: none;
+      border: 1px solid #333333;
+      color: #e0e0e0;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 4px 12px;
+      border-radius: 20px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      font-weight: 500;
+    }
+
+    .file-actions button:hover {
+      background: #2a2a2a;
+      color: white;
+      border-color: #ffffff;
+    }
+
+    .save-status {
+      margin-left: auto;
+      font-size: 12px;
+      background: #111111;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-family: monospace;
+      color: #aaaaaa;
+      border: 1px solid #2a2a2a;
+    }
+
+    /* workspace */
+    .workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* sidebar - black & white minimal */
+    .explorer {
+      width: 280px;
+      background: #050505;
+      border-right: 1px solid #222222;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .explorer-header {
+      padding: 14px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      background: #0a0a0a;
+      border-bottom: 1px solid #222222;
+      color: #cccccc;
+    }
+
+    .file-list {
+      flex: 1;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #0a0a0a;
+      transition: all 0.15s;
+      font-size: 13px;
+      font-family: monospace;
+      gap: 8px;
+      border: 1px solid transparent;
+    }
+
+    .file-item.active {
+      background: #1a1a1a;
+      color: white;
+      border-left: 3px solid #ffffff;
+      border-color: #ffffff;
+    }
+
+    .file-item:hover:not(.active) {
+      background: #141414;
+      border-color: #333333;
+    }
+
+    .file-name {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      word-break: break-word;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+      filter: grayscale(100%);
+    }
+
+    .file-name span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-actions-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .download-file-btn {
+      background: none;
+      border: 1px solid #333;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 12px;
+      border-radius: 4px;
+      width: 26px;
+      height: 26px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      opacity: 0.7;
+    }
+
+    .download-file-btn:hover {
+      opacity: 1;
+      background: #2a2a2a;
+      border-color: #ffffff;
+    }
+
+    .delete-file {
+      background: none;
+      border: 1px solid #442222;
+      color: #ff9999;
+      cursor: pointer;
+      font-size: 14px;
+      border-radius: 4px;
+      width: 26px;
+      height: 26px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.15s;
+      opacity: 0.7;
+    }
+
+    .delete-file:hover {
+      opacity: 1;
+      background: #2a1010;
+      border-color: #ff6666;
+    }
+
+    .new-file-btn {
+      margin: 12px;
+      background: #111111;
+      border: 1px solid #333;
+      padding: 8px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-family: inherit;
+      cursor: pointer;
+      color: #ffffff;
+      transition: 0.15s;
+    }
+
+    .new-file-btn:hover {
+      background: #1f1f1f;
+      border-color: #ffffff;
+    }
+
+    /* main editor panel - pure monochrome */
+    .editor-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #000000;
+      overflow: hidden;
+    }
+
+    .editor-toolbar {
+      background: #0a0a0a;
+      padding: 6px 20px;
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid #222222;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .editor-toolbar button {
+      background: #111111;
+      border: 1px solid #333;
+      color: #e0e0e0;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .editor-toolbar button:hover {
+      background: #222222;
+      border-color: #ffffff;
+      color: white;
+    }
+
+    .format-btn {
+      background: #1a1a1a;
+      color: #ffffff;
+      font-weight: bold;
+      border-color: #444;
+    }
+
+    .format-btn:hover {
+      background: #2a2a2a;
+    }
+
+    .language-badge {
+      background: #111111;
+      padding: 4px 12px;
+      border-radius: 24px;
+      font-size: 11px;
+      font-family: monospace;
+      margin-left: auto;
+      border: 1px solid #333;
+      color: #bbbbbb;
+    }
+
+    /* code editor - high contrast black & white */
+    .code-area {
+      flex: 1;
+      background: #000000;
+      padding: 16px;
+      overflow: auto;
+    }
+
+    textarea#codeEditor {
+      width: 100%;
+      height: 100%;
+      background: #050505;
+      border: 1px solid #2a2a2a;
+      color: #f0f0f0;
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+      padding: 20px;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      tab-size: 2;
+    }
+
+    textarea#codeEditor:focus {
+      border-color: #ffffff;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.2);
+    }
+
+    /* status bar */
+    .status-bar {
+      background: #050505;
+      padding: 6px 18px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      border-top: 1px solid #1f1f1f;
+      font-family: monospace;
+      color: #888888;
+    }
+
+    /* custom scrollbar - monochrome */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0a0a0a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #444;
+    }
+  </style>
+  <!-- Prettier standalone bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.2.5/standalone.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.2.5/plugins/javascript.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.2.5/plugins/html.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.2.5/plugins/css.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.2.5/plugins/markdown.js"></script>
+</head>
+<body>
+<div class="app">
+  <div class="title-bar">
+    <div class="logo">
+      <i>◼◻</i> LightCode · Mono
+    </div>
+    <div class="file-actions">
+      <button id="newFileBtn">+ New File</button>
+      <button id="saveCurrentBtn">💾 Save</button>
+      <button id="downloadAllBtn">📦 Export</button>
+    </div>
+    <div class="save-status" id="saveStatusMsg">⚫ ready</div>
+  </div>
+
+  <div class="workspace">
+    <div class="explorer">
+      <div class="explorer-header">▌ EXPLORER · B&W</div>
+      <div class="file-list" id="fileListContainer"></div>
+      <button class="new-file-btn" id="sidebarNewBtn">+ New File</button>
+    </div>
+
+    <div class="editor-container">
+      <div class="editor-toolbar">
+        <button id="formatBtn" class="format-btn">◈ Prettier Format</button>
+        <button id="saveBtnMini">💾 Save</button>
+        <div class="language-badge" id="langBadge">javascript</div>
+      </div>
+      <div class="code-area">
+        <textarea id="codeEditor" spellcheck="false" placeholder="// write pure monochrome code ..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span>◼ Black & White theme · Template clears on type · ⬇️ download files</span>
+    <span id="cursorPos">Ln 1, Col 1</span>
+  </div>
+</div>
+
+<script>
+  // ---------- File System ----------
+  let files = [
+    { id: 'file1', name: 'welcome.js', content: '// Welcome to LightCode · Monochrome Edition\n// Clean black & white interface.\n// Type anything — template disappears instantly.\n\nfunction greet() {\n  console.log("Hello from monochrome studio!");\n}\n\ngreet();', language: 'javascript', isTemplate: false },
+    { id: 'file2', name: 'style.css', content: '/* Minimal black & white CSS */\nbody {\n  margin: 0;\n  background: #000;\n  color: #fff;\n}\n\n.card {\n  padding: 2rem;\n  border: 1px solid #fff;\n  background: #0a0a0a;\n}', language: 'css', isTemplate: false },
+    { id: 'file3', name: 'index.html', content: `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Monochrome Studio</title>\n</head>\n<body>\n  <h1>Black & White Code Editor</h1>\n  <p>Start typing to replace template →</p>\n</body>\n</html>`, language: 'html', isTemplate: false }
+  ];
+  
+  let currentFileId = 'file1';
+  let editor = document.getElementById('codeEditor');
+  const fileListContainer = document.getElementById('fileListContainer');
+  const saveStatusSpan = document.getElementById('saveStatusMsg');
+  const langBadge = document.getElementById('langBadge');
+  const cursorPosSpan = document.getElementById('cursorPos');
+  
+  let originalTemplateContent = '';
+  
+  function generateId() {
+    return 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+  }
+  
+  function detectLanguage(fileName) {
+    const ext = fileName.split('.').pop().toLowerCase();
+    if (ext === 'js' || ext === 'mjs' || ext === 'cjs') return 'javascript';
+    if (ext === 'html' || ext === 'htm') return 'html';
+    if (ext === 'css') return 'css';
+    if (ext === 'json') return 'json';
+    if (ext === 'md') return 'markdown';
+    if (ext === 'ts') return 'typescript';
+    return 'javascript';
+  }
+  
+  function updateLangBadge(file) {
+    const langMap = {
+      javascript: 'JS', html: 'HTML', css: 'CSS', json: 'JSON', markdown: 'MD', typescript: 'TS'
+    };
+    langBadge.innerText = (langMap[file.language] || file.language).toUpperCase();
+  }
+  
+  // Clear template on first user input (keydown or input)
+  function setupTemplateClear(fileId, templateText) {
+    if (!templateText) return;
+    
+    const clearTemplate = () => {
+      const currentFile = files.find(f => f.id === currentFileId);
+      if (currentFile && currentFile.isTemplate && editor.value === originalTemplateContent) {
+        editor.value = '';
+        currentFile.content = '';
+        currentFile.isTemplate = false;
+        showStatus('▌ template cleared — start writing', 1400);
+        // remove listeners after clearing
+        editor.removeEventListener('keydown', clearTemplate);
+        editor.removeEventListener('input', clearTemplate);
+      }
+    };
+    
+    editor.addEventListener('keydown', clearTemplate, { once: true });
+    editor.addEventListener('input', clearTemplate, { once: true });
+  }
+  
+  function downloadSingleFile(file) {
+    try {
+      if (currentFileId === file.id) {
+        file.content = editor.value;
+        if (file.isTemplate && editor.value === originalTemplateContent) {
+          file.content = '';
+        }
+      }
+      
+      let mimeType = 'text/plain';
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext === 'js') mimeType = 'text/javascript';
+      else if (ext === 'html') mimeType = 'text/html';
+      else if (ext === 'css') mimeType = 'text/css';
+      else if (ext === 'json') mimeType = 'application/json';
+      else if (ext === 'md') mimeType = 'text/markdown';
+      
+      const contentToDownload = (file.isTemplate && file.content === '') ? '' : file.content;
+      const blob = new Blob([contentToDownload || ''], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showStatus(`⬇️ downloaded "${file.name}"`, 1500);
+    } catch (err) {
+      showStatus(`⚠️ download failed`, 1500);
+    }
+  }
+  
+  function renderFileExplorer() {
+    fileListContainer.innerHTML = '';
+    if (files.length === 0) {
+      const emptyMsg = document.createElement('div');
+      emptyMsg.className = 'file-item';
+      emptyMsg.style.opacity = '0.6';
+      emptyMsg.style.justifyContent = 'center';
+      emptyMsg.innerHTML = '<span>◻ no files · click + New</span>';
+      fileListContainer.appendChild(emptyMsg);
+      return;
+    }
+    
+    files.forEach(file => {
+      const fileDiv = document.createElement('div');
+      fileDiv.className = `file-item ${currentFileId === file.id ? 'active' : ''}`;
+      
+      const fileNameDiv = document.createElement('div');
+      fileNameDiv.className = 'file-name';
+      fileNameDiv.innerHTML = `
+        <span class="file-icon">◼</span>
+        <span>${escapeHtml(file.name)}</span>
+      `;
+      
+      const actionsGroup = document.createElement('div');
+      actionsGroup.className = 'file-actions-group';
+      
+      const downloadBtn = document.createElement('button');
+      downloadBtn.className = 'download-file-btn';
+      downloadBtn.title = `Download ${file.name}`;
+      downloadBtn.innerHTML = '⬇';
+      
+      const delBtn = document.createElement('button');
+      delBtn.className = 'delete-file';
+      delBtn.title = `Delete ${file.name}`;
+      delBtn.innerHTML = '✕';
+      
+      actionsGroup.appendChild(downloadBtn);
+      actionsGroup.appendChild(delBtn);
+      
+      fileDiv.appendChild(fileNameDiv);
+      fileDiv.appendChild(actionsGroup);
+      
+      fileDiv.addEventListener('click', (e) => {
+        if (e.target === downloadBtn || e.target === delBtn || downloadBtn.contains(e.target) || delBtn.contains(e.target)) {
+          return;
+        }
+        switchToFile(file.id);
+      });
+      
+      downloadBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        downloadSingleFile(file);
+      });
+      
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteFileById(file.id);
+      });
+      
+      fileListContainer.appendChild(fileDiv);
+    });
+  }
+  
+  function escapeHtml(str) {
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+  
+  function switchToFile(fileId) {
+    const targetFile = files.find(f => f.id === fileId);
+    if (!targetFile) return;
+    
+    const currentFile = files.find(f => f.id === currentFileId);
+    if (currentFile && currentFileId !== fileId) {
+      if (!(currentFile.isTemplate && editor.value === originalTemplateContent)) {
+        currentFile.content = editor.value;
+      }
+      currentFile.isTemplate = false;
+    }
+    
+    currentFileId = fileId;
+    editor.value = targetFile.content;
+    
+    if (targetFile.isTemplate && targetFile.content !== '') {
+      originalTemplateContent = targetFile.content;
+      setupTemplateClear(fileId, originalTemplateContent);
+    } else {
+      originalTemplateContent = '';
+    }
+    
+    updateLangBadge(targetFile);
+    renderFileExplorer();
+    updateCursorPosition();
+    showStatus(`opened ${targetFile.name}`, 1000);
+  }
+  
+  function saveCurrentFile() {
+    const file = files.find(f => f.id === currentFileId);
+    if (!file) return;
+    
+    if (file.isTemplate && editor.value === originalTemplateContent) {
+      file.content = '';
+    } else {
+      file.content = editor.value;
+      file.isTemplate = false;
+    }
+    renderFileExplorer();
+    showStatus(`✓ saved "${file.name}"`, 1200);
+  }
+  
+  function createNewFile() {
+    let fileName = prompt('Enter file name (with extension, e.g., script.js, style.css):', 'newfile.js');
+    if (!fileName) return;
+    fileName = fileName.trim();
+    if (fileName === '') return;
+    
+    const exists = files.some(f => f.name === fileName);
+    if (exists) {
+      if (!confirm(`File "${fileName}" already exists. Overwrite?`)) return;
+      const existing = files.find(f => f.name === fileName);
+      existing.content = '';
+      existing.language = detectLanguage(fileName);
+      existing.isTemplate = false;
+      if (currentFileId === existing.id) editor.value = '';
+      switchToFile(existing.id);
+      showStatus(`overwrote ${fileName}`, 1500);
+      return;
+    }
+    
+    const newId = generateId();
+    const language = detectLanguage(fileName);
+    let defaultContent = '';
+    if (language === 'javascript') defaultContent = '// new javascript file\ntype your code here...\n';
+    else if (language === 'html') defaultContent = '<!-- new html file -->\n<h1>start typing to replace</h1>\n';
+    else if (language === 'css') defaultContent = '/* new stylesheet */\n.element {\n  /* type to clear template */\n}\n';
+    else if (language === 'json') defaultContent = '{\n  "name": "example"\n}\n';
+    else if (language === 'markdown') defaultContent = '# new document\nwrite something...\n';
+    else defaultContent = `// ${fileName}\n`;
+    
+    const newFile = {
+      id: newId,
+      name: fileName,
+      content: defaultContent,
+      language: language,
+      isTemplate: true
+    };
+    files.push(newFile);
+    switchToFile(newId);
+    renderFileExplorer();
+    showStatus(`➕ created ${fileName} (template — type to clear)`, 2000);
+  }
+  
+  function deleteFileById(fileId) {
+    if (files.length === 1) {
+      alert("Cannot delete the only file. Create a new one first.");
+      return;
+    }
+    const fileToDelete = files.find(f => f.id === fileId);
+    if (!fileToDelete) return;
+    const confirmDel = confirm(`Delete "${fileToDelete.name}" permanently?`);
+    if (!confirmDel) return;
+    
+    const index = files.findIndex(f => f.id === fileId);
+    if (index !== -1) files.splice(index, 1);
+    
+    if (currentFileId === fileId) {
+      if (files.length > 0) {
+        switchToFile(files[0].id);
+      } else {
+        currentFileId = null;
+        editor.value = '';
+      }
+    }
+    renderFileExplorer();
+    if (files.length === 0) {
+      editor.value = '';
+    } else if (currentFileId) {
+      const active = files.find(f => f.id === currentFileId);
+      if (active) editor.value = active.content;
+    }
+    showStatus(`🗑 deleted ${fileToDelete.name}`, 1500);
+  }
+  
+  let statusTimeout;
+  function showStatus(msg, duration = 1800) {
+    if (statusTimeout) clearTimeout(statusTimeout);
+    saveStatusSpan.innerText = msg;
+    statusTimeout = setTimeout(() => {
+      saveStatusSpan.innerText = '◼ ready';
+    }, duration);
+  }
+  
+  async function formatWithPrettier() {
+    const file = files.find(f => f.id === currentFileId);
+    if (!file) return;
+    
+    if (file.isTemplate && editor.value === originalTemplateContent) {
+      showStatus('⛔ type something before formatting', 1400);
+      return;
+    }
+    
+    const code = editor.value;
+    const lang = file.language;
+    
+    try {
+      let formatted;
+      if (lang === 'html') {
+        formatted = await prettier.format(code, { parser: 'html', plugins: [prettierPlugins.html], tabWidth: 2 });
+      } else if (lang === 'css') {
+        formatted = await prettier.format(code, { parser: 'css', plugins: [prettierPlugins.css], tabWidth: 2 });
+      } else if (lang === 'markdown') {
+        formatted = await prettier.format(code, { parser: 'markdown', plugins: [prettierPlugins.markdown], tabWidth: 2 });
+      } else if (lang === 'json') {
+        formatted = await prettier.format(code, { parser: 'json', plugins: [prettierPlugins.babel], tabWidth: 2 });
+      } else {
+        formatted = await prettier.format(code, { parser: 'babel', plugins: [prettierPlugins.babel], tabWidth: 2, semi: true, singleQuote: false });
+      }
+      editor.value = formatted;
+      file.content = formatted;
+      file.isTemplate = false;
+      showStatus(`◈ formatted with Prettier (${lang})`, 1800);
+    } catch (err) {
+      showStatus(`⚠️ prettier error: ${err.message.substring(0, 50)}`, 2200);
+    }
+  }
+  
+  function exportAllFiles() {
+    const currentFile = files.find(f => f.id === currentFileId);
+    if (currentFile) {
+      if (!(currentFile.isTemplate && editor.value === originalTemplateContent)) {
+        currentFile.content = editor.value;
+      }
+      currentFile.isTemplate = false;
+    }
+    const exportData = {
+      projectName: "Monochrome_Workspace",
+      files: files.map(f => ({ 
+        name: f.name, 
+        content: (f.isTemplate && f.content === '') ? '' : f.content, 
+        language: f.language 
+      })),
+      theme: "black & white",
+      exportedAt: new Date().toISOString()
+    };
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'monochrome_project.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showStatus(`📦 exported ${files.length} files (B&W)`, 1800);
+  }
+  
+  function syncEditorContent() {
+    const file = files.find(f => f.id === currentFileId);
+    if (file) {
+      if (!(file.isTemplate && editor.value === originalTemplateContent)) {
+        file.content = editor.value;
+        file.isTemplate = false;
+      }
+    }
+  }
+  
+  function updateCursorPosition() {
+    const text = editor.value;
+    const startPos = editor.selectionStart;
+    const lines = text.substr(0, startPos).split('\n');
+    const row = lines.length;
+    const col = lines[lines.length - 1].length + 1;
+    cursorPosSpan.innerText = `Ln ${row}, Col ${col}`;
+  }
+  
+  editor.addEventListener('input', () => {
+    syncEditorContent();
+    updateCursorPosition();
+  });
+  editor.addEventListener('keyup', updateCursorPosition);
+  editor.addEventListener('click', updateCursorPosition);
+  editor.addEventListener('mouseup', updateCursorPosition);
+  
+  document.getElementById('newFileBtn').addEventListener('click', createNewFile);
+  document.getElementById('sidebarNewBtn').addEventListener('click', createNewFile);
+  document.getElementById('saveCurrentBtn').addEventListener('click', saveCurrentFile);
+  document.getElementById('saveBtnMini').addEventListener('click', saveCurrentFile);
+  document.getElementById('formatBtn').addEventListener('click', formatWithPrettier);
+  document.getElementById('downloadAllBtn').addEventListener('click', exportAllFiles);
+  
+  function init() {
+    const startFile = files.find(f => f.id === currentFileId);
+    if (startFile) {
+      editor.value = startFile.content;
+      updateLangBadge(startFile);
+    }
+    renderFileExplorer();
+    updateCursorPosition();
+    showStatus('◼ monochrome theme active · template clears on first keystroke', 3000);
+    editor.focus();
+  }
+  
+  window.addEventListener('beforeunload', () => {
+    syncEditorContent();
+  });
+  
+  init();
+</script>
+</body>
+</html>
