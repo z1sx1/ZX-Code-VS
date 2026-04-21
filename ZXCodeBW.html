@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>LightCode · Smart Editor with Auto-Close Tags</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #000000;
+      font-family: 'Segoe UI', 'SF Mono', 'JetBrains Mono', 'Fira Code', monospace;
+      height: 100vh;
+      overflow: hidden;
+      color: #ffffff;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+    }
+
+    .title-bar {
+      background: #0a0a0a;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border-bottom: 1px solid #2a2a2a;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      background: #111111;
+      padding: 4px 12px;
+      border-radius: 6px;
+      color: #ffffff;
+    }
+
+    .file-actions {
+      display: flex;
+      gap: 12px;
+      background: #0a0a0a;
+      padding: 4px 12px;
+      border-radius: 24px;
+    }
+
+    .file-actions button {
+      background: none;
+      border: 1px solid #333333;
+      color: #e0e0e0;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 4px 12px;
+      border-radius: 20px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      font-weight: 500;
+    }
+
+    .file-actions button:hover {
+      background: #2a2a2a;
+      color: white;
+      border-color: #ffffff;
+    }
+
+    .save-status {
+      margin-left: auto;
+      font-size: 12px;
+      background: #111111;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-family: monospace;
+      color: #aaaaaa;
+      border: 1px solid #2a2a2a;
+    }
+
+    .workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .explorer {
+      width: 280px;
+      background: #050505;
+      border-right: 1px solid #222222;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .explorer-header {
+      padding: 14px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      background: #0a0a0a;
+      border-bottom: 1px solid #222222;
+      color: #cccccc;
+    }
+
+    .file-list {
+      flex: 1;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #0a0a0a;
+      transition: all 0.15s;
+      font-size: 13px;
+      font-family: monospace;
+      gap: 8px;
+      border: 1px solid transparent;
+    }
+
+    .file-item.active {
+      background: #1a1a1a;
+      color: white;
+      border-left: 3px solid #ffffff;
+      border-color: #ffffff;
+    }
+
+    .file-item:hover:not(.active) {
+      background: #141414;
+      border-color: #333333;
+    }
+
+    .file-name {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .file-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+      filter: grayscale(100%);
+    }
+
+    .file-actions-group {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .download-file-btn, .delete-file {
+      background: none;
+      border: 1px solid #333;
+      cursor: pointer;
+      width: 26px;
+      height: 26px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      border-radius: 4px;
+    }
+
+    .download-file-btn {
+      color: #ffffff;
+      opacity: 0.7;
+    }
+
+    .download-file-btn:hover {
+      opacity: 1;
+      background: #2a2a2a;
+      border-color: #ffffff;
+    }
+
+    .delete-file {
+      color: #ff9999;
+      border-color: #442222;
+      opacity: 0.7;
+    }
+
+    .delete-file:hover {
+      opacity: 1;
+      background: #2a1010;
+      border-color: #ff6666;
+    }
+
+    .new-file-btn {
+      margin: 12px;
+      background: #111111;
+      border: 1px solid #333;
+      padding: 8px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-family: inherit;
+      cursor: pointer;
+      color: #ffffff;
+      transition: 0.15s;
+    }
+
+    .new-file-btn:hover {
+      background: #1f1f1f;
+      border-color: #ffffff;
+    }
+
+    .editor-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #000000;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .editor-toolbar {
+      background: #0a0a0a;
+      padding: 6px 20px;
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid #222222;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .editor-toolbar button {
+      background: #111111;
+      border: 1px solid #333;
+      color: #e0e0e0;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .editor-toolbar button:hover {
+      background: #222222;
+      border-color: #ffffff;
+      color: white;
+    }
+
+    .format-btn {
+      background: #1a1a1a;
+      color: #ffffff;
+      font-weight: bold;
+      border-color: #444;
+    }
+
+    .language-badge {
+      background: #111111;
+      padding: 4px 12px;
+      border-radius: 24px;
+      font-size: 11px;
+      font-family: monospace;
+      margin-left: auto;
+      border: 1px solid #333;
+      color: #bbbbbb;
+    }
+
+    .code-area {
+      flex: 1;
+      background: #000000;
+      padding: 16px;
+      overflow: auto;
+      position: relative;
+    }
+
+    textarea#codeEditor {
+      width: 100%;
+      height: 100%;
+      background: #050505;
+      border: 1px solid #2a2a2a;
+      color: #f0f0f0;
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+      padding: 20px;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      tab-size: 2;
+    }
+
+    textarea#codeEditor:focus {
+      border-color: #ffffff;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.2);
+    }
+
+    .suggestions-dropdown {
+      position: absolute;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      min-width: 200px;
+    }
+
+    .suggestion-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 13px;
+      color: #e0e0e0;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    .suggestion-item:hover, .suggestion-item.selected {
+      background: #2a2a2a;
+      color: white;
+    }
+
+    .status-bar {
+      background: #050505;
+      padding: 6px 18px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      border-top: 1px solid #1f1f1f;
+      font-family: monospace;
+      color: #888888;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0a0a0a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.2.5/standalone.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.2.5/plugins/javascript.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.2.5/plugins/html.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.2.5/plugins/css.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.2.5/plugins/markdown.js"></script>
+</head>
+<body>
+<div class="app">
+  <div class="title-bar">
+    <div class="logo">◼◻ LightCode · Smart</div>
+    <div class="file-actions">
+      <button id="newFileBtn">+ New File</button>
+      <button id="saveCurrentBtn">💾 Save</button>
+      <button id="downloadAllBtn">📦 Export</button>
+      <button id="undoBtn" title="Undo (Ctrl+Z)">↩️ Undo</button>
+      <button id="redoBtn" title="Redo (Ctrl+Y)">↪️ Redo</button>
+    </div>
+    <div class="save-status" id="saveStatusMsg">◼ ready</div>
+  </div>
+
+  <div class="workspace">
+    <div class="explorer">
+      <div class="explorer-header">▌ EXPLORER</div>
+      <div class="file-list" id="fileListContainer"></div>
+      <button class="new-file-btn" id="sidebarNewBtn">+ New File</button>
+    </div>
+
+    <div class="editor-container">
+      <div class="editor-toolbar">
+        <button id="formatBtn" class="format-btn">◈ Prettier Format</button>
+        <button id="saveBtnMini">💾 Save</button>
+        <div class="language-badge" id="langBadge">html</div>
+      </div>
+      <div class="code-area" id="codeArea">
+        <textarea id="codeEditor" spellcheck="false" placeholder="// Try typing &lt;title then &gt; - it will auto-close!"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span>◼ Smart completion · Auto-close tags · Try: &lt;title&gt; → auto adds &lt;/title&gt;</span>
+    <span id="cursorPos">Ln 1, Col 1</span>
+  </div>
+</div>
+
+<script>
+  // File System
+  let files = [
+    { id: 'file1', name: 'demo.html', content: `<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Editor Demo</title>
+</head>
+<body>
+    <h1>Try typing &lt;div&gt; here!</h1>
+    <p>It will auto-close as &lt;/div&gt;</p>
+</body>
+</html>`, language: 'html', isTemplate: false }
+  ];
+  
+  let currentFileId = 'file1';
+  let editor = document.getElementById('codeEditor');
+  const fileListContainer = document.getElementById('fileListContainer');
+  const saveStatusSpan = document.getElementById('saveStatusMsg');
+  const langBadge = document.getElementById('langBadge');
+  const cursorPosSpan = document.getElementById('cursorPos');
+  
+  // Undo/Redo history
+  let undoStack = [];
+  let redoStack = [];
+  let isUndoRedoOperation = false;
+  
+  function saveToUndo(content) {
+    if (!isUndoRedoOperation) {
+      undoStack.push(content);
+      redoStack = [];
+      if (undoStack.length > 100) undoStack.shift();
+    }
+  }
+  
+  function undo() {
+    if (undoStack.length > 0) {
+      isUndoRedoOperation = true;
+      const previousContent = undoStack.pop();
+      redoStack.push(editor.value);
+      editor.value = previousContent;
+      syncEditorContent();
+      updateCursorPosition();
+      showStatus('↩️ Undo', 800);
+      isUndoRedoOperation = false;
+    } else {
+      showStatus('Nothing to undo', 800);
+    }
+  }
+  
+  function redo() {
+    if (redoStack.length > 0) {
+      isUndoRedoOperation = true;
+      const nextContent = redoStack.pop();
+      undoStack.push(editor.value);
+      editor.value = nextContent;
+      syncEditorContent();
+      updateCursorPosition();
+      showStatus('↪️ Redo', 800);
+      isUndoRedoOperation = false;
+    } else {
+      showStatus('Nothing to redo', 800);
+    }
+  }
+  
+  // HTML Tags (self-closing tags ko exclude kiya hai)
+  const htmlTags = [
+    'a', 'abbr', 'address', 'article', 'aside', 'audio', 'b', 'bdi', 'bdo', 
+    'blockquote', 'body', 'button', 'canvas', 'caption', 'cite', 'code', 
+    'colgroup', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 
+    'dl', 'dt', 'em', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hr', 'html', 'i', 
+    'iframe', 'ins', 'kbd', 'label', 'legend', 'li', 'main', 'map', 'mark', 
+    'menu', 'meter', 'nav', 'noscript', 'object', 'ol', 'optgroup', 'option', 
+    'output', 'p', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 
+    'samp', 'script', 'section', 'select', 'small', 'source', 'span', 'strong', 
+    'style', 'sub', 'summary', 'sup', 'svg', 'table', 'tbody', 'td', 'template', 
+    'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'u', 'ul', 
+    'var', 'video', 'wbr'
+  ];
+  
+  // Self-closing tags (jinhe close nahi karna)
+  const selfClosingTags = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+  
+  const htmlAttributes = [
+    'class', 'id', 'style', 'src', 'href', 'alt', 'title', 'type', 'name', 'value',
+    'placeholder', 'disabled', 'readonly', 'required', 'checked', 'selected', 'target',
+    'rel', 'method', 'action', 'enctype', 'charset', 'lang', 'dir', 'tabindex'
+  ];
+  
+  let currentSuggestions = [];
+  let selectedSuggestionIndex = -1;
+  let suggestionsDropdown = null;
+  
+  function showSuggestions(suggestions, cursorPos, isAttribute = false) {
+    hideSuggestions();
+    if (!suggestions.length) return;
+    
+    currentSuggestions = suggestions;
+    selectedSuggestionIndex = 0;
+    
+    const dropdown = document.createElement('div');
+    dropdown.className = 'suggestions-dropdown';
+    
+    suggestions.forEach((suggestion, index) => {
+      const item = document.createElement('div');
+      item.className = 'suggestion-item';
+      if (index === 0) item.classList.add('selected');
+      item.textContent = suggestion;
+      item.onclick = () => insertSuggestion(suggestion, isAttribute);
+      dropdown.appendChild(item);
+    });
+    
+    const textarea = editor;
+    const rect = textarea.getBoundingClientRect();
+    const textareaStyle = window.getComputedStyle(textarea);
+    const lineHeight = parseInt(textareaStyle.lineHeight);
+    const padding = parseInt(textareaStyle.paddingLeft);
+    
+    const textBeforeCursor = editor.value.substring(0, cursorPos);
+    const lines = textBeforeCursor.split('\n');
+    const currentLineIndex = lines.length - 1;
+    const currentLineText = lines[currentLineIndex];
+    
+    const dummy = document.createElement('div');
+    dummy.style.font = textareaStyle.font;
+    dummy.style.fontSize = textareaStyle.fontSize;
+    dummy.style.fontFamily = textareaStyle.fontFamily;
+    dummy.style.position = 'absolute';
+    dummy.style.visibility = 'hidden';
+    dummy.style.whiteSpace = 'pre';
+    dummy.textContent = currentLineText;
+    document.body.appendChild(dummy);
+    const textWidth = dummy.offsetWidth;
+    document.body.removeChild(dummy);
+    
+    const lineHeightPx = lineHeight || 20;
+    const top = rect.top + (currentLineIndex * lineHeightPx) + lineHeightPx;
+    const left = rect.left + padding + textWidth;
+    
+    dropdown.style.position = 'fixed';
+    dropdown.style.top = `${top}px`;
+    dropdown.style.left = `${left}px`;
+    
+    document.body.appendChild(dropdown);
+    suggestionsDropdown = dropdown;
+  }
+  
+  function hideSuggestions() {
+    if (suggestionsDropdown) {
+      suggestionsDropdown.remove();
+      suggestionsDropdown = null;
+    }
+    currentSuggestions = [];
+    selectedSuggestionIndex = -1;
+  }
+  
+  function insertSuggestion(suggestion, isAttribute = false) {
+    if (!suggestionsDropdown) return;
+    
+    const cursorPos = editor.selectionStart;
+    const textBeforeCursor = editor.value.substring(0, cursorPos);
+    const textAfterCursor = editor.value.substring(cursorPos);
+    
+    const lastOpenBracket = textBeforeCursor.lastIndexOf('<');
+    if (lastOpenBracket !== -1) {
+      const beforeTag = textBeforeCursor.substring(0, lastOpenBracket + 1);
+      let newText = beforeTag + suggestion + textAfterCursor;
+      let newCursorPos = lastOpenBracket + 1 + suggestion.length;
+      
+      // Agar tag hai aur self-closing nahi hai toh closing tag add karo
+      if (!isAttribute && !selfClosingTags.includes(suggestion)) {
+        // Check agar already closing tag exist karta hai
+        const closingTag = `</${suggestion}>`;
+        // Check karo ki kya closing tag already exist karta hai
+        const remainingText = textAfterCursor;
+        if (!remainingText.trim().startsWith(`</${suggestion}`)) {
+          newText = beforeTag + suggestion + '>' + closingTag + textAfterCursor;
+          newCursorPos = lastOpenBracket + 1 + suggestion.length + 1; // cursor '>' ke baad
+        } else {
+          newText = beforeTag + suggestion + textAfterCursor;
+          newCursorPos = lastOpenBracket + 1 + suggestion.length;
+        }
+      } else if (!isAttribute && suggestion !== '') {
+        newText = beforeTag + suggestion + '>' + textAfterCursor;
+        newCursorPos = lastOpenBracket + 1 + suggestion.length + 1;
+      }
+      
+      editor.value = newText;
+      editor.selectionStart = editor.selectionEnd = newCursorPos;
+      syncEditorContent();
+      saveToUndo(editor.value);
+      showStatus(`✓ Inserted <${suggestion}>`, 1000);
+    }
+    
+    hideSuggestions();
+    editor.focus();
+  }
+  
+  // Auto-close HTML tags when typing '>'
+  function autoCloseTag(key, cursorPos, textBefore, textAfter) {
+    if (key === '>') {
+      // Find the last opening tag
+      const match = textBefore.match(/<([a-zA-Z][a-zA-Z0-9]*)(?:\s+[^>]*)?$/);
+      if (match) {
+        const tagName = match[1];
+        // Check if it's not a self-closing tag
+        if (!selfClosingTags.includes(tagName)) {
+          // Check if closing tag already exists nearby
+          const nextChars = textAfter.substring(0, 50);
+          if (!nextChars.includes(`</${tagName}>`)) {
+            const closingTag = `</${tagName}>`;
+            editor.value = textBefore + closingTag + textAfter;
+            editor.selectionStart = editor.selectionEnd = cursorPos;
+            syncEditorContent();
+            saveToUndo(editor.value);
+            showStatus(`✓ Auto-closed <${tagName}> → </${tagName}>`, 800);
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+  
+  function handleSuggestionKey(e) {
+    if (!suggestionsDropdown) return false;
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, currentSuggestions.length - 1);
+      updateSuggestionSelection();
+      return true;
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
+      updateSuggestionSelection();
+      return true;
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      if (currentSuggestions[selectedSuggestionIndex]) {
+        insertSuggestion(currentSuggestions[selectedSuggestionIndex], false);
+      }
+      return true;
+    } else if (e.key === 'Escape') {
+      hideSuggestions();
+      return true;
+    }
+    return false;
+  }
+  
+  function updateSuggestionSelection() {
+    if (suggestionsDropdown) {
+      const items = suggestionsDropdown.querySelectorAll('.suggestion-item');
+      items.forEach((item, index) => {
+        if (index === selectedSuggestionIndex) {
+          item.classList.add('selected');
+          item.scrollIntoView({ block: 'nearest' });
+        } else {
+          item.classList.remove('selected');
+        }
+      });
+    }
+  }
+  
+  function checkForSuggestions(text, cursorPos) {
+    const textBeforeCursor = text.substring(0, cursorPos);
+    const lastOpenBracket = textBeforeCursor.lastIndexOf('<');
+    
+    if (lastOpenBracket !== -1) {
+      const afterBracket = textBeforeCursor.substring(lastOpenBracket + 1);
+      // Check if we're inside a tag
+      if (!afterBracket.includes('>')) {
+        // Check if we're typing attribute (has space and no '=')
+        if (afterBracket.includes(' ') && !afterBracket.includes('=')) {
+          const parts = afterBracket.split(' ');
+          const lastPart = parts[parts.length - 1];
+          if (lastPart && !lastPart.includes('=') && lastPart.length > 0) {
+            const filteredAttrs = htmlAttributes.filter(attr => 
+              attr.toLowerCase().startsWith(lastPart.toLowerCase())
+            );
+            if (filteredAttrs.length > 0) {
+              showSuggestions(filteredAttrs.slice(0, 15), cursorPos, true);
+              return;
+            }
+          }
+        } else if (!afterBracket.includes(' ')) {
+          // Suggest tags
+          const filteredTags = htmlTags.filter(tag => 
+            tag.toLowerCase().startsWith(afterBracket.toLowerCase())
+          );
+          if (filteredTags.length > 0) {
+            showSuggestions(filteredTags.slice(0, 20), cursorPos, false);
+            return;
+          }
+        }
+      }
+    }
+    hideSuggestions();
+  }
+  
+  let lastContent = '';
+  
+  editor.addEventListener('input', (e) => {
+    if (!isUndoRedoOperation) {
+      saveToUndo(lastContent);
+    }
+    lastContent = editor.value;
+    syncEditorContent();
+    updateCursorPosition();
+    
+    const cursorPos = editor.selectionStart;
+    checkForSuggestions(editor.value, cursorPos);
+  });
+  
+  editor.addEventListener('keydown', (e) => {
+    // Undo/Redo shortcuts
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      undo();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+      e.preventDefault();
+      redo();
+      return;
+    }
+    
+    if (handleSuggestionKey(e)) return;
+    
+    const cursorPos = editor.selectionStart;
+    const textBefore = editor.value.substring(0, cursorPos);
+    const textAfter = editor.value.substring(cursorPos);
+    
+    if (autoCloseTag(e.key, cursorPos, textBefore, textAfter)) {
+      e.preventDefault();
+      saveToUndo(editor.value);
+    }
+    
+    if (e.key === 'Escape') {
+      hideSuggestions();
+    }
+  });
+  
+  editor.addEventListener('click', () => {
+    hideSuggestions();
+    updateCursorPosition();
+  });
+  
+  editor.addEventListener('blur', () => {
+    setTimeout(() => hideSuggestions(), 200);
+  });
+  
+  function generateId() {
+    return 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+  }
+  
+  function detectLanguage(fileName) {
+    const ext = fileName.split('.').pop().toLowerCase();
+    if (ext === 'js') return 'javascript';
+    if (ext === 'html') return 'html';
+    if (ext === 'css') return 'css';
+    if (ext === 'json') return 'json';
+    return 'html';
+  }
+  
+  function updateLangBadge(file) {
+    langBadge.innerText = file.language.toUpperCase();
+  }
+  
+  function downloadSingleFile(file) {
+    if (currentFileId === file.id) {
+      file.content = editor.value;
+    }
+    const blob = new Blob([file.content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showStatus(`⬇️ Downloaded "${file.name}"`, 1500);
+  }
+  
+  function renderFileExplorer() {
+    fileListContainer.innerHTML = '';
+    files.forEach(file => {
+      const fileDiv = document.createElement('div');
+      fileDiv.className = `file-item ${currentFileId === file.id ? 'active' : ''}`;
+      fileDiv.innerHTML = `
+        <div class="file-name">
+          <span class="file-icon">◼</span>
+          <span>${escapeHtml(file.name)}</span>
+        </div>
+        <div class="file-actions-group">
+          <button class="download-file-btn" data-id="${file.id}">⬇</button>
+          <button class="delete-file" data-id="${file.id}">✕</button>
+        </div>
+      `;
+      fileDiv.addEventListener('click', (e) => {
+        if (e.target.classList.contains('download-file-btn') || e.target.classList.contains('delete-file')) return;
+        switchToFile(file.id);
+      });
+      fileDiv.querySelector('.download-file-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        downloadSingleFile(file);
+      });
+      fileDiv.querySelector('.delete-file').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteFileById(file.id);
+      });
+      fileListContainer.appendChild(fileDiv);
+    });
+  }
+  
+  function escapeHtml(str) {
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+  
+  function switchToFile(fileId) {
+    const targetFile = files.find(f => f.id === fileId);
+    if (!targetFile) return;
+    
+    const currentFile = files.find(f => f.id === currentFileId);
+    if (currentFile && currentFileId !== fileId) {
+      currentFile.content = editor.value;
+    }
+    
+    currentFileId = fileId;
+    editor.value = targetFile.content;
+    lastContent = editor.value;
+    saveToUndo(editor.value);
+    updateLangBadge(targetFile);
+    renderFileExplorer();
+    updateCursorPosition();
+    showStatus(`Opened ${targetFile.name}`, 1000);
+  }
+  
+  function saveCurrentFile() {
+    const file = files.find(f => f.id === currentFileId);
+    if (file) {
+      file.content = editor.value;
+      renderFileExplorer();
+      showStatus(`✓ Saved "${file.name}"`, 1200);
+    }
+  }
+  
+  function createNewFile() {
+    let fileName = prompt('Enter file name (with extension):', 'newfile.html');
+    if (!fileName) return;
+    fileName = fileName.trim();
+    if (fileName === '') return;
+    
+    const newId = generateId();
+    const language = detectLanguage(fileName);
+    const defaultContent = language === 'html' ? `<!DOCTYPE html>
+<html>
+<head>
+    <title>New Document</title>
+</head>
+<body>
+    <h1>Start coding!</h1>
+    <p>Try typing &lt;div&gt; - it will auto-close!</p>
+</body>
+</html>` : `// New ${language} file\n`;
+    
+    const newFile = {
+      id: newId,
+      name: fileName,
+      content: defaultContent,
+      language: language,
+      isTemplate: false
+    };
+    files.push(newFile);
+    switchToFile(newId);
+    renderFileExplorer();
+    showStatus(`➕ Created ${fileName}`, 1500);
+  }
+  
+  function deleteFileById(fileId) {
+    if (files.length === 1) {
+      alert("Cannot delete the only file.");
+      return;
+    }
+    const fileToDelete = files.find(f => f.id === fileId);
+    if (!fileToDelete) return;
+    if (!confirm(`Delete "${fileToDelete.name}"?`)) return;
+    
+    const index = files.findIndex(f => f.id === fileId);
+    files.splice(index, 1);
+    
+    if (currentFileId === fileId) {
+      switchToFile(files[0].id);
+    }
+    renderFileExplorer();
+    showStatus(`🗑 Deleted ${fileToDelete.name}`, 1500);
+  }
+  
+  function showStatus(msg, duration = 1800) {
+    if (statusTimeout) clearTimeout(statusTimeout);
+    saveStatusSpan.innerText = msg;
+    statusTimeout = setTimeout(() => {
+      saveStatusSpan.innerText = '◼ ready';
+    }, duration);
+  }
+  
+  let statusTimeout;
+  
+  async function formatWithPrettier() {
+    const file = files.find(f => f.id === currentFileId);
+    if (!file || file.language !== 'html') {
+      showStatus('Formatting only for HTML files', 1000);
+      return;
+    }
+    try {
+      const formatted = await prettier.format(editor.value, { parser: 'html', plugins: [prettierPlugins.html], tabWidth: 2 });
+      saveToUndo(editor.value);
+      editor.value = formatted;
+      file.content = formatted;
+      showStatus('✨ Formatted with Prettier', 1500);
+    } catch (err) {
+      showStatus('⚠️ Format error', 1500);
+    }
+  }
+  
+  function exportAllFiles() {
+    const currentFile = files.find(f => f.id === currentFileId);
+    if (currentFile) currentFile.content = editor.value;
+    const exportData = { files: files.map(f => ({ name: f.name, content: f.content })) };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'project_backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus('📦 Exported project', 1500);
+  }
+  
+  function syncEditorContent() {
+    const file = files.find(f => f.id === currentFileId);
+    if (file) file.content = editor.value;
+  }
+  
+  function updateCursorPosition() {
+    const text = editor.value;
+    const startPos = editor.selectionStart;
+    const lines = text.substr(0, startPos).split('\n');
+    const row = lines.length;
+    const col = lines[lines.length - 1].length + 1;
+    cursorPosSpan.innerText = `Ln ${row}, Col ${col}`;
+  }
+  
+  document.getElementById('newFileBtn').addEventListener('click', createNewFile);
+  document.getElementById('sidebarNewBtn').addEventListener('click', createNewFile);
+  document.getElementById('saveCurrentBtn').addEventListener('click', saveCurrentFile);
+  document.getElementById('saveBtnMini').addEventListener('click', saveCurrentFile);
+  document.getElementById('formatBtn').addEventListener('click', formatWithPrettier);
+  document.getElementById('downloadAllBtn').addEventListener('click', exportAllFiles);
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('redoBtn').addEventListener('click', redo);
+  
+  function init() {
+    const startFile = files[0];
+    editor.value = startFile.content;
+    lastContent = editor.value;
+    saveToUndo(editor.value);
+    updateLangBadge(startFile);
+    renderFileExplorer();
+    updateCursorPosition();
+    showStatus('🚀 Smart editor ready · Try typing &lt;div&gt; and see auto-closing!', 3500);
+    editor.focus();
+  }
+  
+  init();
+</script>
+</body>
+</html>
